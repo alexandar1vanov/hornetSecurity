@@ -1,0 +1,6 @@
+.git
+.idea
+*.exe
+*_test.go
+Dockerfile
+.dockerignore
