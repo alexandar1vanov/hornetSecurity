@@ -27,12 +27,15 @@ Documents are stored **in memory**, so all data is lost when the server stops.
 ├── integration_test.go             # End-to-end tests against a real HTTP test server
 ├── Dockerfile                      # Multi-stage build (golang:alpine → distroless)
 ├── .dockerignore
+├── .gitignore
 ├── go.mod
 └── internal/
     ├── model/
     │   └── document.go             # Document entity
     ├── handler/
-    │   ├── document_handler.go     # HTTP routes, JSON encoding/decoding, error mapping
+    │   ├── document_handler.go     # HTTP routes and request handlers
+    │   ├── types.go                # Request/response types
+    │   ├── utils.go                # JSON encoding/decoding, error mapping, helpers
     │   └── document_handler_test.go
     ├── service/
     │   ├── document_service.go     # Business logic and validation
@@ -48,7 +51,7 @@ Documents are stored **in memory**, so all data is lost when the server stops.
 |-------|----------------|
 | **Handler** | Registers routes, parses path params and JSON bodies, maps errors to HTTP status codes |
 | **Service** | Validates documents (e.g. `name` must not be blank) and delegates to the repository |
-| **Repository** | Stores documents; `InMemoryDocumentRepository` assigns auto-incrementing IDs |
+| **Repository** | Stores documents; the in-memory repository assigns auto-incrementing IDs |
 
 Each layer depends on an interface of the layer below, so implementations (e.g. a
 database-backed repository) can be swapped without touching the other layers.
