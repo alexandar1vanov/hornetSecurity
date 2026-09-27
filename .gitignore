@@ -1,0 +1,23 @@
+# IDE
+.idea/
+.vscode/
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/hornetSecurity
+
+# Test and coverage output
+*.test
+*.out
+coverage.*
+
+# Environment files
+.env
+
+# OS files
+.DS_Store
+Thumbs.db

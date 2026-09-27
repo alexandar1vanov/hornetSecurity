@@ -15,19 +15,19 @@ type DocumentRepository interface {
 	Delete(id int) error
 }
 
-type InMemoryDocumentRepository struct {
+type inMemoryDocumentRepository struct {
 	mu        sync.RWMutex
 	documents map[int]model.Document
 	nextId    int
 }
 
 func NewInMemoryDocumentRepository() DocumentRepository {
-	return &InMemoryDocumentRepository{
+	return &inMemoryDocumentRepository{
 		documents: make(map[int]model.Document),
 	}
 }
 
-func (repository *InMemoryDocumentRepository) Create(document model.Document) (model.Document, error) {
+func (repository *inMemoryDocumentRepository) Create(document model.Document) (model.Document, error) {
 	repository.mu.Lock()
 	defer repository.mu.Unlock()
 
@@ -37,7 +37,7 @@ func (repository *InMemoryDocumentRepository) Create(document model.Document) (m
 	return document, nil
 }
 
-func (repository *InMemoryDocumentRepository) Get(id int) (model.Document, error) {
+func (repository *inMemoryDocumentRepository) Get(id int) (model.Document, error) {
 	repository.mu.RLock()
 	defer repository.mu.RUnlock()
 
@@ -48,7 +48,7 @@ func (repository *InMemoryDocumentRepository) Get(id int) (model.Document, error
 	return doc, nil
 }
 
-func (repository *InMemoryDocumentRepository) Delete(id int) error {
+func (repository *inMemoryDocumentRepository) Delete(id int) error {
 	repository.mu.Lock()
 	defer repository.mu.Unlock()
 
