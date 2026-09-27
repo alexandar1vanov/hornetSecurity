@@ -29,14 +29,14 @@ func (f *fakeService) GetDocument(id int) (model.Document, error) { return f.get
 
 func (f *fakeService) DeleteDocument(id int) error { return f.del(id) }
 
-func newTestMux(svc DocumentService) *http.ServeMux {
+func newTestMux(svc service.DocumentService) *http.ServeMux {
 	mux := http.NewServeMux()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	NewDocumentHandler(svc, logger).RegisterRoutes(mux)
 	return mux
 }
 
-func serve(svc DocumentService, method, path, body string) *httptest.ResponseRecorder {
+func serve(svc service.DocumentService, method, path, body string) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	newTestMux(svc).ServeHTTP(rec, req)
@@ -51,7 +51,7 @@ func assertJSONResponse(t *testing.T, rec *httptest.ResponseRecorder, wantStatus
 	if got := rec.Header().Get("Content-Type"); got != "application/json" {
 		t.Errorf("Content-Type = %q, want %q", got, "application/json")
 	}
-	if got := rec.Body.String(); got != wantBody {
+	if got := strings.TrimSpace(rec.Body.String()); got != wantBody {
 		t.Errorf("body = %s, want %s", got, wantBody)
 	}
 }
@@ -76,7 +76,7 @@ func TestCreateDocument(t *testing.T) {
 			createFn:     echoWithID,
 			wantStatus:   http.StatusCreated,
 			wantBody:     `{"id":1,"name":"name","description":"description"}`,
-			wantLocation: "/documents/1",
+			wantLocation: "/api/v1/documents/1",
 		},
 		{
 			name:         "description is optional",
@@ -84,7 +84,7 @@ func TestCreateDocument(t *testing.T) {
 			createFn:     echoWithID,
 			wantStatus:   http.StatusCreated,
 			wantBody:     `{"id":1,"name":"name","description":""}`,
-			wantLocation: "/documents/1",
+			wantLocation: "/api/v1/documents/1",
 		},
 		{
 			name:       "empty body",
@@ -150,7 +150,7 @@ func TestCreateDocument(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec := serve(&fakeService{create: tt.createFn}, http.MethodPost, "/documents", tt.body)
+			rec := serve(&fakeService{create: tt.createFn}, http.MethodPost, "/api/v1/documents", tt.body)
 
 			assertJSONResponse(t, rec, tt.wantStatus, tt.wantBody)
 			if got := rec.Header().Get("Location"); got != tt.wantLocation {
@@ -168,7 +168,7 @@ func TestCreateDocument_PassesRequestToService(t *testing.T) {
 		return d, nil
 	}}
 
-	serve(svc, http.MethodPost, "/documents", `{"name":"name","description":"description"}`)
+	serve(svc, http.MethodPost, "/api/v1/documents", `{"name":"name","description":"description"}`)
 
 	want := model.Document{Name: "name", Description: "description"}
 	if received != want {
@@ -186,7 +186,7 @@ func TestGetDocument(t *testing.T) {
 	}{
 		{
 			name: "existing document",
-			path: "/documents/1",
+			path: "/api/v1/documents/1",
 			getFn: func(id int) (model.Document, error) {
 				return model.Document{ID: id, Name: "name", Description: "description"}, nil
 			},
@@ -195,7 +195,7 @@ func TestGetDocument(t *testing.T) {
 		},
 		{
 			name: "missing document",
-			path: "/documents/7",
+			path: "/api/v1/documents/7",
 			getFn: func(id int) (model.Document, error) {
 				return model.Document{}, fmt.Errorf("document %d: %w", id, repository.ErrNotFound)
 			},
@@ -204,25 +204,25 @@ func TestGetDocument(t *testing.T) {
 		},
 		{
 			name:       "non-numeric id",
-			path:       "/documents/abc",
+			path:       "/api/v1/documents/abc",
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"error":"id must be a positive integer"}`,
 		},
 		{
 			name:       "zero id",
-			path:       "/documents/0",
+			path:       "/api/v1/documents/0",
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"error":"id must be a positive integer"}`,
 		},
 		{
 			name:       "negative id",
-			path:       "/documents/-1",
+			path:       "/api/v1/documents/-1",
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"error":"id must be a positive integer"}`,
 		},
 		{
 			name: "unexpected service error",
-			path: "/documents/1",
+			path: "/api/v1/documents/1",
 			getFn: func(int) (model.Document, error) {
 				return model.Document{}, errors.New("boom")
 			},
@@ -249,20 +249,20 @@ func TestDeleteDocument(t *testing.T) {
 	}{
 		{
 			name:       "missing document",
-			path:       "/documents/7",
+			path:       "/api/v1/documents/7",
 			deleteFn:   func(id int) error { return fmt.Errorf("document %d: %w", id, repository.ErrNotFound) },
 			wantStatus: http.StatusNotFound,
 			wantBody:   `{"error":"document not found"}`,
 		},
 		{
 			name:       "invalid id",
-			path:       "/documents/abc",
+			path:       "/api/v1/documents/abc",
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"error":"id must be a positive integer"}`,
 		},
 		{
 			name:       "unexpected service error",
-			path:       "/documents/1",
+			path:       "/api/v1/documents/1",
 			deleteFn:   func(int) error { return errors.New("boom") },
 			wantStatus: http.StatusInternalServerError,
 			wantBody:   `{"error":"internal server error"}`,
@@ -284,7 +284,7 @@ func TestDeleteDocument_Success(t *testing.T) {
 		return nil
 	}}
 
-	rec := serve(svc, http.MethodDelete, "/documents/5", "")
+	rec := serve(svc, http.MethodDelete, "/api/v1/documents/5", "")
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNoContent)
@@ -302,10 +302,10 @@ func TestRoutes_MethodNotAllowed(t *testing.T) {
 		method string
 		path   string
 	}{
-		{method: http.MethodGet, path: "/documents"},
-		{method: http.MethodPut, path: "/documents"},
-		{method: http.MethodPost, path: "/documents/1"},
-		{method: http.MethodPatch, path: "/documents/1"},
+		{method: http.MethodGet, path: "/api/v1/documents"},
+		{method: http.MethodPut, path: "/api/v1/documents"},
+		{method: http.MethodPost, path: "/api/v1/documents/1"},
+		{method: http.MethodPatch, path: "/api/v1/documents/1"},
 	}
 
 	for _, tt := range tests {

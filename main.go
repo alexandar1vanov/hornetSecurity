@@ -14,38 +14,46 @@ import (
 	"hornetSecurity/internal/service"
 )
 
+type app struct {
+	logger *slog.Logger
+	port   string
+}
+
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	if err := run(logger); err != nil {
+	port := handler.GetPort()
+
+	a := &app{logger: logger, port: port}
+	if err := a.run(); err != nil {
 		logger.Error("failed to run application", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run(logger *slog.Logger) error {
+func (a *app) run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	repo := repository.NewInMemoryDocumentRepository()
 	serv := service.NewDocumentService(repo)
-	docHandler := handler.NewDocumentHandler(serv, logger)
+	docHandler := handler.NewDocumentHandler(serv, a.logger)
 
 	mux := http.NewServeMux()
 	docHandler.RegisterRoutes(mux)
 
 	server := &http.Server{
-		Addr:              ":" + getEnv("PORT", "8080"),
+		Addr:              ":" + a.port,
 		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
 
 	serverErr := make(chan error, 1)
 	go func() {
-		logger.Info("starting server", "addr", server.Addr)
+		a.logger.Info("starting server", "addr", server.Addr)
 		serverErr <- server.ListenAndServe()
 	}()
 
@@ -55,16 +63,9 @@ func run(logger *slog.Logger) error {
 	case <-ctx.Done():
 	}
 
-	logger.Info("shutting down server")
+	a.logger.Info("shutting down server")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	return server.Shutdown(shutdownCtx)
-}
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
 }

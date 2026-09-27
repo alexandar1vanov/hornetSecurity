@@ -99,32 +99,32 @@ Base URL: `http://localhost:8080`
 
 ### Create a document
 
-`POST /documents`
+`POST /api/v1/documents`
 
 ```bash
-curl -i -X POST http://localhost:8080/documents \
+curl -i -X POST http://localhost:8080/api/v1/documents \
   -H "Content-Type: application/json" \
   -d '{"name": "Report", "description": "Quarterly security report"}'
 ```
 
-**Response:** `201 Created` with a `Location: /documents/{id}` header and the created document in the body.
+**Response:** `201 Created` with a `Location: /api/v1/documents/{id}` header and the created document in the body.
 
 ### Get a document
 
-`GET /documents/{id}`
+`GET /api/v1/documents/{id}`
 
 ```bash
-curl -i http://localhost:8080/documents/1
+curl -i http://localhost:8080/api/v1/documents/1
 ```
 
 **Response:** `200 OK` with the document in the body.
 
 ### Delete a document
 
-`DELETE /documents/{id}`
+`DELETE /api/v1/documents/{id}`
 
 ```bash
-curl -i -X DELETE http://localhost:8080/documents/1
+curl -i -X DELETE http://localhost:8080/api/v1/documents/1
 ```
 
 **Response:** `204 No Content`.

@@ -59,7 +59,7 @@ func decode[T any](t *testing.T, resp *http.Response) T {
 func TestDocumentLifecycle(t *testing.T) {
 	srv := newTestServer(t)
 
-	resp := doRequest(t, http.MethodPost, srv.URL+"/documents", `{"name":"report","description":"quarterly"}`)
+	resp := doRequest(t, http.MethodPost, srv.URL+"/api/v1/documents", `{"name":"report","description":"quarterly"}`)
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("create status = %d, want %d", resp.StatusCode, http.StatusCreated)
 	}
@@ -96,7 +96,7 @@ func TestDocumentLifecycle(t *testing.T) {
 func TestCreateDocument_ValidationThroughAllLayers(t *testing.T) {
 	srv := newTestServer(t)
 
-	resp := doRequest(t, http.MethodPost, srv.URL+"/documents", `{"name":"   "}`)
+	resp := doRequest(t, http.MethodPost, srv.URL+"/api/v1/documents", `{"name":"   "}`)
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
 	}
@@ -109,8 +109,8 @@ func TestCreateDocument_ValidationThroughAllLayers(t *testing.T) {
 func TestCreateDocument_AssignsDistinctIDs(t *testing.T) {
 	srv := newTestServer(t)
 
-	first := decode[document](t, doRequest(t, http.MethodPost, srv.URL+"/documents", `{"name":"a"}`))
-	second := decode[document](t, doRequest(t, http.MethodPost, srv.URL+"/documents", `{"name":"b"}`))
+	first := decode[document](t, doRequest(t, http.MethodPost, srv.URL+"/api/v1/documents", `{"name":"a"}`))
+	second := decode[document](t, doRequest(t, http.MethodPost, srv.URL+"/api/v1/documents", `{"name":"b"}`))
 
 	if first.ID == second.ID {
 		t.Errorf("both documents got ID %d", first.ID)
